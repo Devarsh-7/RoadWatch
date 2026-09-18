@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+roadwatch.db
+*.db-journal
+venv/
+.venv/
+dist/
+build/
+*.egg-info/

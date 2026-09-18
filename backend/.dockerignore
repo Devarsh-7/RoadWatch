@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+*.pyo
+venv/
+.venv/
+.env
+roadwatch.db
+*.db-journal
+uploads/
+.git
+.gitignore
+test_*.py
