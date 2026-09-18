@@ -42,8 +42,9 @@ from schemas import (
     AdminLogin, TokenResponse, AdminUserOut, AdminUserCreate, ComplaintAssignPayload,
     ComplaintEscalatePayload, AuditLogOut, ContractorPerformanceOut, DistrictReportOut,
     ForgotPasswordRequest, ResetPasswordRequest, VerifyEmailRequest, ResendVerificationRequest,
-    CitizenResponsePayload
+    CitizenResponsePayload, OsmIngestRequest
 )
+from data_ingestion import fetch_osm_roads, import_roads_csv
 from sanitizer import (
     sanitize_search_query, sanitize_text, validate_uploaded_image, sanitize_filename
 )
@@ -2463,4 +2464,44 @@ def export_reports(
 def get_current_user_profile(current_user: AdminUser = Depends(get_current_admin)):
     """Returns the authenticated officer's own profile without exposing other administrative records."""
     return current_user
+
+
+# ─── Data Ingestion Endpoints ─────────────────────────────────
+
+@app.post("/api/admin/ingest/osm")
+def trigger_osm_ingestion(
+    payload: OsmIngestRequest,
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_admin)
+):
+    """
+    Directly fetches live highway and geospatial data from OpenStreetMap Overpass API.
+    Zero external API key required.
+    """
+    _log_audit(db, current_user.id, "INGEST_OSM", "roads", None, {"state": payload.state, "limit": payload.limit})
+    result = fetch_osm_roads(db, state_name=payload.state, limit=payload.limit)
+    return result
+
+
+@app.post("/api/admin/roads/bulk-import")
+async def bulk_import_roads(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_admin)
+):
+    """
+    Directly uploads and parses a CSV dataset of roads, updating or inserting records into the database.
+    """
+    clean_filename = sanitize_filename(file.filename)
+    if not clean_filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Only CSV files (.csv) are supported for bulk road import.")
+
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:  # 10MB limit
+        raise HTTPException(status_code=400, detail="Uploaded CSV exceeds maximum 10MB limit.")
+
+    _log_audit(db, current_user.id, "BULK_IMPORT_ROADS", "roads", None, {"filename": clean_filename, "size_bytes": len(content)})
+    result = import_roads_csv(db, content, filename=clean_filename)
+    return result
+
 

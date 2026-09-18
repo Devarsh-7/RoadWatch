@@ -458,3 +458,10 @@ class DistrictReportOut(BaseModel):
         from_attributes = True
 
 
+class OsmIngestRequest(BaseModel):
+    state: str = Field(default="Tamil Nadu", max_length=100)
+    limit: int = Field(default=25, ge=1, le=100)
+
+
+
+

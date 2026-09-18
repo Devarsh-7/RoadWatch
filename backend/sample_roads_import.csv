@@ -1,0 +1,4 @@
+road_name,road_type,state,district,length_km,budget_sanctioned,budget_spent,contractor_name,contractor_contact,exec_engineer,latitude_start,longitude_start
+NH-544 (Salem – Kochi Bypass),NH,Tamil Nadu,Coimbatore,54.0,92.5,84.1,Larsen & Toubro Ltd,+91 422 245 9012,Er. M. Senthil,10.9982,76.9658
+SH-18 (Salem – Tiruchengode Road),SH,Tamil Nadu,Namakkal,38.5,41.2,38.9,KNR Constructions,+91 428 623 4567,Er. S. Murugan,11.3789,77.8921
+NH-75 (Bengaluru – Hassan Highway),NH,Karnataka,Hassan,120.0,185.0,162.4,Shapoorji Pallonji,+91 80 2345 8890,Er. V. Gowda,12.9716,77.5946
