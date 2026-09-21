@@ -51,26 +51,34 @@ India has the **2nd largest road network** in the world (5.9M+ km), yet citizens
 - **Google Gemini AI** — RAG-based chatbot with road data context
 - **Pydantic** — Request/response validation
 
+## 🏛️ System Architecture
+
+For an in-depth technical breakdown including C4 diagrams, sequence flows, database entity relationships, and algorithmic scoring formulas, read the [**Full System Architecture Specification (ARCHITECTURE.md)**](ARCHITECTURE.md).
+
 ## 📁 Project Structure
 
 ```
 RoadWatch/
+├── ARCHITECTURE.md         # Complete system architecture specification & diagrams
 ├── frontend/
 │   ├── src/
-│   │   ├── components/     # Navbar, Footer, PageTransition
-│   │   ├── pages/          # Landing, Search, Dashboard, Complaint, Chatbot, RoadDetail
+│   │   ├── components/     # Navbar, Footer, BeforeAfterSlider, CitizenVerification
+│   │   ├── pages/          # Landing, Search, Dashboard, Complaint, Chatbot, RoadDetail, Admin
 │   │   ├── api.js          # API client with offline queue
 │   │   └── index.css       # Design system (glassmorphism theme)
 │   ├── index.html
 │   └── vite.config.js
 │
 ├── backend/
-│   ├── main.py             # FastAPI routes (roads, complaints, authorities)
-│   ├── models.py           # SQLAlchemy models (Road, Complaint, Authority)
+│   ├── main.py             # FastAPI routes (roads, complaints, authorities, repairs, admin)
+│   ├── models.py           # SQLAlchemy models (Road, Complaint, Authority, Repair, AuditLog)
 │   ├── schemas.py          # Pydantic validation schemas
-│   ├── chatbot.py          # Gemini AI RAG chatbot
+│   ├── chatbot.py          # Gemini AI RAG chatbot with FAISS vector store
+│   ├── security.py         # PBKDF2 cryptography, PyJWT, IDOR & jurisdictional control
+│   ├── abuse_protection.py # Sliding-window rate limiters & bot honeypots
+│   ├── data_ingestion.py   # OpenStreetMap Overpass & CSV bulk import pipelines
 │   ├── seed_data.py        # 20 realistic roads across 5 Indian states
-│   ├── database.py         # DB connection
+│   ├── database.py         # DB connection & connection pooling (SQLite / Supabase Postgres)
 │   └── requirements.txt
 │
 └── README.md
