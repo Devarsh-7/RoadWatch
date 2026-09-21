@@ -88,6 +88,7 @@ else:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -115,9 +116,12 @@ async def security_and_https_headers_middleware(request: Request, call_next):
     forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
     is_http = forwarded_proto == "http" or (not forwarded_proto and request.url.scheme == "http")
     host = request.url.hostname or ""
-    is_localhost = host in ("localhost", "127.0.0.1", "testclient")
+    is_localhost = host in ("localhost", "127.0.0.1", "0.0.0.0", "testclient")
+    is_health_endpoint = request.url.path in (
+        "/", "/api/health", "/api/ping", "/api/keep-alive", "/api/cron/keep-alive"
+    )
 
-    if (enforce_https or env == "production") and is_http and not is_localhost:
+    if (enforce_https or env == "production") and is_http and not is_localhost and not is_health_endpoint:
         https_url = request.url.replace(scheme="https")
         return RedirectResponse(url=str(https_url), status_code=308)
 
@@ -423,8 +427,20 @@ def _road_to_card(road: Road) -> dict:
 # ═══════════════════════════════════════════════════════════
 
 
-# ─── Cron / Keep-Alive Endpoint ────────────────────────────
+# ─── Root & Cron / Keep-Alive Endpoints ─────────────────────────
 
+@app.get("/")
+def root():
+    """Root endpoint providing service status and API discovery."""
+    return {
+        "status": "online",
+        "app": "RoadWatch API",
+        "version": "1.0.0",
+        "health": "/api/health",
+        "docs": "/docs"
+    }
+
+@app.api_route("/health", methods=["GET", "HEAD"], status_code=200)
 @app.api_route("/api/cron/keep-alive", methods=["GET", "HEAD"], status_code=200)
 @app.api_route("/api/keep-alive", methods=["GET", "HEAD"], status_code=200)
 @app.api_route("/api/ping", methods=["GET", "HEAD"], status_code=200)
