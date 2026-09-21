@@ -418,16 +418,18 @@ def _road_to_card(road: Road) -> dict:
 @app.api_route("/api/cron/keep-alive", methods=["GET", "HEAD"], status_code=200)
 @app.api_route("/api/keep-alive", methods=["GET", "HEAD"], status_code=200)
 @app.api_route("/api/ping", methods=["GET", "HEAD"], status_code=200)
+@app.api_route("/api/health", methods=["GET", "HEAD"], status_code=200)
 def keep_alive():
     """
-    Lightweight keep-alive endpoint for automated cron jobs and uptime monitors.
+    Lightweight keep-alive / health endpoint for automated cron jobs and uptime monitors.
     - Publicly accessible without authentication
     - Zero database queries or heavy computation
     - Modifies no application state
     - Exposes no secrets or sensitive data
     """
     return {
-        "status": "alive",
+        "status": "healthy",
+        "app": "RoadWatch",
         "message": "RoadWatch backend is active",
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
