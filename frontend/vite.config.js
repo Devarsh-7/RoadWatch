@@ -44,6 +44,31 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    target: 'esnext',
+    cssCodeSplit: true,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('three') || id.includes('@react-three')) {
+              return 'vendor-three';
+            }
+            if (id.includes('recharts')) {
+              return 'vendor-recharts';
+            }
+            if (id.includes('leaflet') || id.includes('react-leaflet')) {
+              return 'vendor-leaflet';
+            }
+            if (id.includes('framer-motion')) {
+              return 'vendor-framer';
+            }
+          }
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

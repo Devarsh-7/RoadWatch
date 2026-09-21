@@ -134,10 +134,7 @@ export default function Navbar() {
         )}
       </AnimatePresence>
 
-      <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+      <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           scrolled ? 'glass-strong shadow-2xl' : ''
         }`}
@@ -338,7 +335,7 @@ export default function Navbar() {
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.nav>
+      </nav>
     </>
   );
 }

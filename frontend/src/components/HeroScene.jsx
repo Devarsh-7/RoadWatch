@@ -2,9 +2,8 @@
  * HeroScene — Three.js 3D animated highway scene for the landing page.
  * Simple road geometry with moving cars and city lights in the background.
  */
-import { useRef, useMemo } from 'react';
+import { useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
 
 /* ── Road Surface ─────────────────────────────── */
 function Road() {
@@ -77,8 +76,21 @@ function Car({ startZ, speed, lane, color }) {
   );
 }
 
+const BUILDINGS_DATA = Array.from({ length: 10 }, (_, i) => {
+  const side = i % 2 === 0 ? -1 : 1;
+  const pseudoRand1 = ((i * 37) % 10) / 10;
+  const pseudoRand2 = ((i * 53) % 10) / 10;
+  const pseudoRand3 = ((i * 79) % 10) / 10;
+  return {
+    position: [side * (4 + pseudoRand1 * 3), -0.5, -25 + i * 5 + pseudoRand2 * 2],
+    height: 1.5 + pseudoRand3 * 3.5,
+    width: 0.8 + pseudoRand1 * 0.8,
+  };
+});
+
 /* ── City Building ────────────────────────────── */
 function Building({ position, height, width }) {
+  const floors = Math.floor(height * 2);
   return (
     <group position={position}>
       <mesh position={[0, height / 2, 0]}>
@@ -86,13 +98,13 @@ function Building({ position, height, width }) {
         <meshStandardMaterial color="#0d1b2a" metalness={0.5} roughness={0.5} />
       </mesh>
       {/* Windows (emissive dots) */}
-      {Array.from({ length: Math.floor(height * 2) }).map((_, y) =>
+      {Array.from({ length: floors }).map((_, y) =>
         Array.from({ length: 2 }).map((_, x) => (
           <mesh key={`${y}-${x}`} position={[(x - 0.5) * width * 0.3, y * 0.5 + 0.5, width * 0.41]}>
             <planeGeometry args={[0.15, 0.15]} />
             <meshStandardMaterial
-              emissive={Math.random() > 0.3 ? '#FFD166' : '#52B788'}
-              emissiveIntensity={Math.random() * 0.5 + 0.3}
+              emissive={(y + x) % 2 === 0 ? '#FFD166' : '#52B788'}
+              emissiveIntensity={0.5}
             />
           </mesh>
         ))
@@ -112,14 +124,22 @@ function StreetLights() {
             <cylinderGeometry args={[0.03, 0.03, 2.5]} />
             <meshStandardMaterial color="#374151" />
           </mesh>
-          <pointLight position={[-2.5, 2.3, -25 + i * 7]} color="#FFD166" intensity={0.5} distance={5} />
+          {/* Left glowing lantern head */}
+          <mesh position={[-2.5, 2.3, -25 + i * 7]}>
+            <sphereGeometry args={[0.08]} />
+            <meshStandardMaterial color="#FFD166" emissive="#FFD166" emissiveIntensity={2} />
+          </mesh>
 
           {/* Right pole */}
           <mesh position={[2.5, 1, -25 + i * 7]}>
             <cylinderGeometry args={[0.03, 0.03, 2.5]} />
             <meshStandardMaterial color="#374151" />
           </mesh>
-          <pointLight position={[2.5, 2.3, -25 + i * 7]} color="#FFD166" intensity={0.5} distance={5} />
+          {/* Right glowing lantern head */}
+          <mesh position={[2.5, 2.3, -25 + i * 7]}>
+            <sphereGeometry args={[0.08]} />
+            <meshStandardMaterial color="#FFD166" emissive="#FFD166" emissiveIntensity={2} />
+          </mesh>
         </group>
       ))}
     </>
@@ -140,29 +160,19 @@ function CameraRig() {
 
 /* ── Main Scene ───────────────────────────────── */
 export default function HeroScene() {
-  const buildings = useMemo(() => {
-    const b = [];
-    for (let i = 0; i < 12; i++) {
-      const side = i % 2 === 0 ? -1 : 1;
-      b.push({
-        position: [side * (4 + Math.random() * 3), -0.5, -25 + i * 4.5 + Math.random() * 2],
-        height: 1.5 + Math.random() * 4,
-        width: 0.8 + Math.random() * 0.8,
-      });
-    }
-    return b;
-  }, []);
+  const buildings = BUILDINGS_DATA;
 
   return (
-    <div className="w-full h-full absolute inset-0">
+    <div className="w-full h-full absolute inset-0 pointer-events-none">
       <Canvas
         camera={{ position: [3, 3, 8], fov: 50 }}
-        gl={{ antialias: true, alpha: true }}
+        dpr={[1, 1.5]}
+        gl={{ antialias: false, alpha: true, powerPreference: 'low-power', stencil: false, depth: true }}
         style={{ background: 'transparent' }}
       >
         <fog attach="fog" args={['#0A0F1E', 10, 35]} />
-        <ambientLight intensity={0.15} />
-        <directionalLight position={[5, 10, 5]} intensity={0.3} color="#9CA3AF" />
+        <ambientLight intensity={0.4} />
+        <directionalLight position={[5, 10, 5]} intensity={0.5} color="#9CA3AF" />
 
         <Road />
         <StreetLights />

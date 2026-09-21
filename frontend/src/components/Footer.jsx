@@ -27,7 +27,13 @@ export default function Footer() {
             </p>
             <div className="flex gap-3">
               {['github', 'twitter'].map((s) => (
-                <motion.a key={s} href="#" whileHover={{ y: -2 }} className="w-9 h-9 rounded-xl bg-surface-light/50 flex items-center justify-center text-text-secondary hover:text-secondary hover:bg-surface-light transition-all">
+                <motion.a
+                  key={s}
+                  href="#"
+                  aria-label={s === 'github' ? 'RoadWatch GitHub' : 'RoadWatch Twitter'}
+                  whileHover={{ y: -2 }}
+                  className="w-9 h-9 rounded-xl bg-surface-light/50 flex items-center justify-center text-text-secondary hover:text-secondary hover:bg-surface-light transition-all"
+                >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg>
                 </motion.a>
               ))}
@@ -35,7 +41,7 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="font-heading font-semibold text-xs uppercase tracking-widest text-text-secondary mb-4">Quick Links</h4>
+            <h3 className="font-heading font-semibold text-xs uppercase tracking-widest text-text-secondary mb-4">Quick Links</h3>
             <div className="space-y-2.5">
               {links.map(({ to, label }) => (
                 <Link key={to} to={to} className="block text-sm text-text-secondary hover:text-secondary transition-colors hover:translate-x-1 transform duration-200">{label}</Link>
@@ -44,7 +50,7 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="font-heading font-semibold text-xs uppercase tracking-widest text-text-secondary mb-4">Data Sources</h4>
+            <h3 className="font-heading font-semibold text-xs uppercase tracking-widest text-text-secondary mb-4">Data Sources</h3>
             <div className="space-y-2.5">
               {sources.map((s) => <p key={s} className="text-sm text-text-secondary">{s}</p>)}
             </div>

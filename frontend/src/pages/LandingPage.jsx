@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
@@ -13,7 +13,6 @@ function AnimatedNumber({ target, suffix = '', duration = 2000 }) {
 
   useEffect(() => {
     if (!inView) return;
-    let start = 0;
     const startTime = performance.now();
     const tick = (now) => {
       const elapsed = now - startTime;
@@ -32,24 +31,22 @@ function AnimatedNumber({ target, suffix = '', duration = 2000 }) {
   );
 }
 
+const STATIC_PARTICLES = Array.from({ length: 20 }, (_, i) => ({
+  left: `${((i * 17 + 7) % 100)}%`,
+  bottom: '-10px',
+  opacity: (((i * 19) % 40) + 10) / 100,
+  width: `${((i * 13) % 3) + 2}px`,
+  height: `${((i * 13) % 3) + 2}px`,
+  animationDuration: `${((i * 23) % 15) + 10}s`,
+  animationDelay: `${((i * 29) % 10)}s`,
+}));
+
 /* ── Floating Particles ────── */
 function Particles() {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {Array.from({ length: 20 }).map((_, i) => (
-        <div
-          key={i}
-          className="particle"
-          style={{
-            left: `${Math.random() * 100}%`,
-            bottom: `-10px`,
-            opacity: Math.random() * 0.4 + 0.1,
-            width: `${Math.random() * 3 + 2}px`,
-            height: `${Math.random() * 3 + 2}px`,
-            animationDuration: `${Math.random() * 15 + 10}s`,
-            animationDelay: `${Math.random() * 10}s`,
-          }}
-        />
+    <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ contain: 'paint layout' }}>
+      {STATIC_PARTICLES.map((style, i) => (
+        <div key={i} className="particle" style={style} />
       ))}
     </div>
   );
@@ -58,7 +55,7 @@ function Particles() {
 /* ── Text Typewriter ────── */
 function TypeWriter({ words, className }) {
   const [idx, setIdx] = useState(0);
-  const [text, setText] = useState('');
+  const [text, setText] = useState(words[0] || '');
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -66,7 +63,7 @@ function TypeWriter({ words, className }) {
     const speed = deleting ? 40 : 80;
     const timer = setTimeout(() => {
       if (!deleting && text === word) {
-        setTimeout(() => setDeleting(true), 2000);
+        setTimeout(() => setDeleting(true), 2500);
       } else if (deleting && text === '') {
         setDeleting(false);
         setIdx((prev) => (prev + 1) % words.length);
@@ -79,7 +76,7 @@ function TypeWriter({ words, className }) {
 
   return (
     <span className={className}>
-      {text}<span className="animate-pulse text-accent">|</span>
+      {text}<span className="inline-block animate-pulse text-accent ml-0.5" aria-hidden="true">|</span>
     </span>
   );
 }
@@ -117,11 +114,39 @@ const stats = [
 
 export default function LandingPage() {
   const [search, setSearch] = useState('');
+  const [load3D, setLoad3D] = useState(false);
   const navigate = useNavigate();
-  const heroRef = useRef(null);
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
-  const heroScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.95]);
+  const { scrollY } = useScroll();
+  const heroOpacity = useTransform(scrollY, [0, 600], [1, 0]);
+  const heroScale = useTransform(scrollY, [0, 600], [1, 0.95]);
+
+  useEffect(() => {
+    // Only load heavy 3D scene on desktop devices after user interaction or timeout
+    if (typeof window === 'undefined' || window.innerWidth < 768) return;
+
+    let loaded = false;
+    let timer;
+    const trigger = () => {
+      if (loaded) return;
+      loaded = true;
+      setLoad3D(true);
+      cleanup();
+    };
+
+    const cleanup = () => {
+      window.removeEventListener('scroll', trigger);
+      window.removeEventListener('mousemove', trigger);
+      window.removeEventListener('touchstart', trigger);
+      clearTimeout(timer);
+    };
+
+    window.addEventListener('scroll', trigger, { passive: true, once: true });
+    window.addEventListener('mousemove', trigger, { passive: true, once: true });
+    window.addEventListener('touchstart', trigger, { passive: true, once: true });
+    timer = setTimeout(trigger, 4000);
+
+    return cleanup;
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -131,13 +156,17 @@ export default function LandingPage() {
   return (
     <PageTransition>
       {/* ── Hero ─────────────────────────────── */}
-      <motion.section ref={heroRef} style={{ opacity: heroOpacity, scale: heroScale }} className="relative min-h-screen flex items-center overflow-hidden">
+      <motion.section style={{ opacity: heroOpacity, scale: heroScale }} className="relative min-h-screen flex items-center overflow-hidden">
         <Particles />
 
         <div className="absolute inset-0 md:left-[40%] opacity-50 md:opacity-70">
-          <Suspense fallback={<div className="w-full h-full" />}>
-            <HeroScene />
-          </Suspense>
+          {load3D ? (
+            <Suspense fallback={<div className="w-full h-full" />}>
+              <HeroScene />
+            </Suspense>
+          ) : (
+            <div className="w-full h-full bg-gradient-to-tr from-primary/10 via-transparent to-secondary/10" />
+          )}
         </div>
 
         <div className="absolute inset-0 bg-gradient-to-r from-bg via-bg/95 to-bg/30 z-10" />
@@ -145,17 +174,15 @@ export default function LandingPage() {
 
         <div className="relative z-20 max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 pt-32 pb-20 w-full">
           <div className="max-w-2xl">
-            <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}>
+            <div>
               <div className="flex items-center gap-2 mb-6">
                 <div className="pulse-live" />
                 <span className="badge badge-nh">Live Road Data Platform</span>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold font-heading leading-[1.1] mb-2">
-                Know Your Road.
-              </h1>
-              <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold font-heading leading-[1.1] mb-6">
-                <span className="text-glow text-secondary">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-heading leading-[1.15] mb-6">
+                Know Your Road.<br />
+                <span className="text-glow text-secondary inline-block min-h-[2.4em] sm:min-h-[1.25em]">
                   <TypeWriter words={['Hold Them Accountable.', 'Track Every Rupee.', 'Demand Better Roads.']} />
                 </span>
               </h1>
@@ -163,13 +190,10 @@ export default function LandingPage() {
               <p className="text-text-secondary text-base sm:text-lg leading-relaxed mb-10 max-w-xl">
                 India's first open road data platform. Search any road, see who built it, how much was spent, and file complaints that reach the right authority.
               </p>
-            </motion.div>
+            </div>
 
             {/* Search bar */}
-            <motion.form
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.6 }}
+            <form
               onSubmit={handleSearch}
               className="flex flex-col sm:flex-row gap-3"
             >
@@ -185,9 +209,9 @@ export default function LandingPage() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
                 Search
               </button>
-            </motion.form>
+            </form>
 
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="flex items-center gap-4 mt-4">
+            <div className="flex items-center gap-4 mt-4">
               <button
                 onClick={() => navigator.geolocation?.getCurrentPosition((p) => navigate(`/search?lat=${p.coords.latitude}&lng=${p.coords.longitude}`), () => alert('Location denied'))}
                 className="flex items-center gap-2 text-text-secondary hover:text-secondary text-sm transition-colors cursor-pointer"
@@ -197,7 +221,7 @@ export default function LandingPage() {
               </button>
               <span className="text-text-secondary/30">|</span>
               <button onClick={() => navigate('/search')} className="text-text-secondary hover:text-secondary text-sm transition-colors cursor-pointer">Browse All Roads</button>
-            </motion.div>
+            </div>
           </div>
         </div>
       </motion.section>
