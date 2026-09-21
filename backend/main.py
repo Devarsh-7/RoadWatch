@@ -355,11 +355,21 @@ def require_role(roles: List[str]):
 @app.on_event("startup")
 def startup():
     """Initialize database, apply schema columns, validate secrets, and populate with sample data on first run."""
-    validate_production_secrets()
-    Base.metadata.create_all(bind=engine)
-    _ensure_db_schema()
-    seed()
-    print("[OK] RoadWatch API is ready with secured authentication.")
+    try:
+        print("[INFO] Starting RoadWatch API initialization...", flush=True)
+        validate_production_secrets()
+        print("[INFO] Production secrets validated successfully.", flush=True)
+        Base.metadata.create_all(bind=engine)
+        _ensure_db_schema()
+        seed()
+        print("[OK] RoadWatch API is ready with secured authentication.", flush=True)
+    except Exception as exc:
+        print(f"\n==================================================", flush=True)
+        print(f"[FATAL STARTUP ERROR] {type(exc).__name__}: {str(exc)}", flush=True)
+        print(f"==================================================\n", flush=True)
+        import traceback
+        traceback.print_exc()
+        raise exc
 
 
 # ─── Helper: serialize Road with transparency score ────────

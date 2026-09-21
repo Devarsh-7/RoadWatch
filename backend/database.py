@@ -12,7 +12,11 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./roadwatch.db")
 
-is_postgres = DATABASE_URL.startswith("postgresql") or DATABASE_URL.startswith("postgres")
+# Normalize deprecated postgres:// scheme to postgresql:// for SQLAlchemy 2.0
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+is_postgres = DATABASE_URL.startswith("postgresql")
 
 # Restrict and enforce TLS/SSL encryption for remote PostgreSQL database connections
 if is_postgres:
