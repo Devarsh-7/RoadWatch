@@ -73,9 +73,16 @@ def initialize_chatbot(db):
     try:
         from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
         from langchain_community.vectorstores import FAISS
-        from langchain.chains import RetrievalQA
-        from langchain.schema import Document
-        from langchain.prompts import PromptTemplate
+        try:
+            from langchain.chains import RetrievalQA
+        except ImportError:
+            from langchain_classic.chains import RetrievalQA
+        try:
+            from langchain_core.documents import Document
+            from langchain_core.prompts import PromptTemplate
+        except ImportError:
+            from langchain.schema import Document
+            from langchain.prompts import PromptTemplate
 
         # Build documents from road data
         raw_docs = _build_road_documents(db)
@@ -86,7 +93,7 @@ def initialize_chatbot(db):
 
         # Create embeddings using Gemini
         embeddings = GoogleGenerativeAIEmbeddings(
-            model="models/embedding-001",
+            model="models/gemini-embedding-001",
             google_api_key=api_key,
         )
 
@@ -101,6 +108,7 @@ maintenance budgets, and government accountability.
 
 Use the following road data to answer the citizen's question accurately.
 Always cite specific data points (road name, budget amounts, dates, engineer names).
+If the question is a greeting or general inquiry about RoadWatch, answer politely and explain how you can help.
 If the data doesn't contain the answer, say so honestly.
 
 Road Data:
@@ -108,14 +116,13 @@ Road Data:
 
 Citizen's Question: {question}
 
-Answer (be specific, cite numbers and names):""",
+Answer:""",
         )
 
-        # Build QA chain with Gemini 1.5 Flash
+        # Build QA chain with Gemini Flash
         llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
+            model="gemini-3.6-flash",
             google_api_key=api_key,
-            temperature=0.3,
         )
 
         _qa_chain = RetrievalQA.from_chain_type(
@@ -146,7 +153,7 @@ async def chat(message: str, db) -> Tuple[str, List[str]]:
     if _qa_chain is not None:
         try:
             result = _qa_chain.invoke({"query": message})
-            reply = result.get("result", "I couldn't find an answer.")
+            reply = str(result.get("result", "I couldn't find an answer."))
             sources = list({
                 doc.metadata.get("source", "RoadWatch DB")
                 for doc in result.get("source_documents", [])
@@ -166,19 +173,37 @@ def _fallback_search(message: str, db) -> Tuple[str, List[str]]:
     """
     from models import Road
 
-    msg_lower = message.lower()
+    msg_lower = message.lower().strip()
     roads = db.query(Road).all()
+
+    # Friendly greeting / guidance
+    if any(greet in msg_lower for greet in ["hello", "hi", "hey", "who are you", "what can you do"]):
+        return (
+            "Hello! I am RoadWatch AI. I can help you find information about road projects, budgets, "
+            "contractors, and road conditions across India. Try asking about a specific road like NH-44, NH-8, "
+            "or ask about roads in a specific state or district!",
+            ["RoadWatch DB"],
+        )
+
+    if any(q in msg_lower for q in ["how to report", "file complaint", "report pothole", "report road"]):
+        return (
+            "To report an issue or complaint about a road, navigate to the **Report Road** section in the navigation bar. "
+            "You can upload photos, specify the road and location, and track authority responses directly.",
+            ["RoadWatch Portal"],
+        )
 
     matches = []
     for road in roads:
         if (road.road_name.lower() in msg_lower or
+                (road.state and road.state.lower() in msg_lower) or
+                (road.district and road.district.lower() in msg_lower) or
                 any(word in road.road_name.lower() for word in msg_lower.split() if len(word) > 2)):
             matches.append(road)
 
     if not matches:
         return (
             "I couldn't find specific road data matching your question. "
-            "Try asking about a specific road like NH-44, NH-8, or SH-49. "
+            "Try asking about a specific road like NH-44, NH-8, or SH-49, or searching by state or district. "
             "You can also search roads on the Search page.",
             [],
         )
