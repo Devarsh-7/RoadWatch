@@ -425,6 +425,9 @@ class Escalation(Base):
     status = Column(String(50), nullable=False, default="Escalated")  # Escalated / Resolved / Overruled
     reason = Column(Text, nullable=True)
 
+    # Relationships
+    complaint = relationship("Complaint")
+
 
 class AuditLog(Base):
     """Logs administrative actions for accountability and transparency."""

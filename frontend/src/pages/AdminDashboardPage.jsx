@@ -172,43 +172,56 @@ export default function AdminDashboardPage() {
     try {
       const headers = getHeaders(token);
       
-      // 1. Dashboard metrics
-      const dashRes = await axios.get(`${API_BASE}/api/admin/dashboard`, headers);
-      setMetrics(dashRes.data.metrics);
-      setBudgetByState(dashRes.data.budget_by_state);
+      // Fetch core and secondary data streams in parallel
+      const [
+        dashRes,
+        compRes,
+        roadsRes,
+        repairsRes,
+        contrRes,
+        budgetRes,
+        aiRes,
+        notRes,
+        alyRes
+      ] = await Promise.allSettled([
+        axios.get(`${API_BASE}/api/admin/dashboard`, headers),
+        axios.get(`${API_BASE}/api/admin/complaints`, headers),
+        axios.get(`${API_BASE}/api/roads`, headers),
+        axios.get(`${API_BASE}/api/repairs/dashboard`, headers),
+        axios.get(`${API_BASE}/api/admin/contracts`, headers),
+        axios.get(`${API_BASE}/api/admin/budget`, headers),
+        axios.get(`${API_BASE}/api/admin/ai-insights`, headers),
+        axios.get(`${API_BASE}/api/admin/notifications`, headers),
+        axios.get(`${API_BASE}/api/admin/analytics`, headers),
+      ]);
 
-      // 2. Complaints
-      const compRes = await axios.get(`${API_BASE}/api/admin/complaints`, headers);
-      setComplaints(compRes.data);
+      if (dashRes.status === 'fulfilled') {
+        setMetrics(dashRes.value.data.metrics);
+        setBudgetByState(dashRes.value.data.budget_by_state);
+      }
+      if (compRes.status === 'fulfilled') setComplaints(compRes.value.data);
+      if (roadsRes.status === 'fulfilled') setRoads(roadsRes.value.data);
+      if (repairsRes.status === 'fulfilled') setRepairs(repairsRes.value.data.district_wise_activity || []);
+      if (contrRes.status === 'fulfilled') setContractors(contrRes.value.data);
+      if (budgetRes.status === 'fulfilled') setBudgetData(budgetRes.value.data);
+      if (aiRes.status === 'fulfilled') setAiInsights(aiRes.value.data);
+      if (notRes.status === 'fulfilled') setNotifications(notRes.value.data);
+      if (alyRes.status === 'fulfilled') setAnalytics(alyRes.value.data);
 
-      // 3. Roads
-      const roadsRes = await axios.get(`${API_BASE}/api/roads`, headers);
-      setRoads(roadsRes.data);
-
-      // 4. Repairs
-      const repairsRes = await axios.get(`${API_BASE}/api/repairs/dashboard`, headers);
-      setRepairs(repairsRes.data.district_wise_activity || []);
-
-      // 5. Contractors
-      const contrRes = await axios.get(`${API_BASE}/api/admin/contracts`, headers);
-      setContractors(contrRes.data);
-
-      // 6. Budget
-      const budgetRes = await axios.get(`${API_BASE}/api/admin/budget`, headers);
-      setBudgetData(budgetRes.data);
-
-      // 7. AI Insights
-      const aiRes = await axios.get(`${API_BASE}/api/admin/ai-insights`, headers);
-      setAiInsights(aiRes.data);
-
-      // 8. Notifications
-      const notRes = await axios.get(`${API_BASE}/api/admin/notifications`, headers);
-      setNotifications(notRes.data);
-
-      // 9. Analytics
-      const alyRes = await axios.get(`${API_BASE}/api/admin/analytics`, headers);
-      setAnalytics(alyRes.data);
-
+      // If the primary dashboard metrics request failed, surface the error
+      if (dashRes.status === 'rejected') {
+        const err = dashRes.reason;
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          localStorage.removeItem('admin_token');
+          localStorage.removeItem('admin_role');
+          localStorage.removeItem('admin_name');
+          localStorage.removeItem('admin_state');
+          localStorage.removeItem('admin_district');
+          navigate('/admin-login');
+          return;
+        }
+        throw err;
+      }
     } catch (err) {
       console.error(err);
       if (err.response?.status === 401 || err.response?.status === 403) {
@@ -220,7 +233,8 @@ export default function AdminDashboardPage() {
         navigate('/admin-login');
         return;
       }
-      setError(`Failed to fetch administrative data streams: ${err.message}. Status: ${err.response?.status || 'Network Error'}. Detail: ${err.response?.data?.detail || 'Please verify uvicorn backend connection on port 8000.'}`);
+      const fallbackDetail = API_BASE ? `Please verify backend availability at ${API_BASE}` : 'Please verify uvicorn backend connection on port 8000.';
+      setError(`Failed to fetch administrative data streams: ${err.message}. Status: ${err.response?.status || 'Network Error'}. Detail: ${err.response?.data?.detail || fallbackDetail}`);
     } finally {
       setLoading(false);
     }

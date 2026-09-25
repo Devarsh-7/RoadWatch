@@ -2398,10 +2398,11 @@ def get_admin_notifications(db: Session = Depends(get_db), current_user: AdminUs
         esc_q = esc_q.filter(Road.district == district)
     esc = esc_q.first()
     if esc:
+        comp_ref = esc.complaint.complaint_ref_id if getattr(esc, "complaint", None) else f"#{esc.complaint_id}"
         alerts.append({
             "id": 2,
             "title": "SLA Escalation Alert",
-            "message": f"Complaint {esc.complaint.complaint_ref_id} escalated to {esc.escalated_to}. Reason: {esc.reason or 'Unresolved within SLA timeline'}.",
+            "message": f"Complaint {comp_ref} escalated to {esc.escalated_to}. Reason: {esc.reason or 'Unresolved within SLA timeline'}.",
             "type": "Escalation",
             "severity": "Critical",
             "timestamp": esc.escalated_at
