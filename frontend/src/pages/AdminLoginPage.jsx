@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import AdminExitHeader from '../components/AdminExitHeader';
+import { authStorage } from '../utils/authStorage';
 
 const OFFICER_ROLES = [
   { role: 'Super Admin', username: 'admin', desc: 'Global system overview & authority control' },
@@ -20,6 +21,7 @@ export default function AdminLoginPage() {
   const [infoMessage, setInfoMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Reset Password Modal States
   const [showResetModal, setShowResetModal] = useState(false);
@@ -39,8 +41,16 @@ export default function AdminLoginPage() {
 
   // Validate active session on mount
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
-    const role = localStorage.getItem('admin_role');
+    // If redirected with a specific reason (e.g. idle timeout, logout), show message
+    if (location.state?.reason) {
+      setInfoMessage(location.state.reason);
+    }
+
+    // Always purge any stale legacy localStorage admin tokens
+    authStorage.purgeLegacyLocalStorage();
+
+    const token = authStorage.getToken();
+    const role = authStorage.getRole();
 
     if (token && role) {
       try {
@@ -56,14 +66,12 @@ export default function AdminLoginPage() {
         // Corrupted token, wipe
       }
       // Expired or invalid
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin_role');
-      localStorage.removeItem('admin_name');
-      localStorage.removeItem('admin_state');
-      localStorage.removeItem('admin_district');
-      setInfoMessage('Your previous session has expired. Please authenticate to continue.');
+      authStorage.clearSession();
+      if (!location.state?.reason) {
+        setInfoMessage('Your previous session has expired. Please authenticate to continue.');
+      }
     }
-  }, [navigate]);
+  }, [navigate, location.state]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -84,11 +92,13 @@ export default function AdminLoginPage() {
       });
 
       const { access_token, role, name, state, district } = response.data;
-      localStorage.setItem('admin_token', access_token);
-      localStorage.setItem('admin_role', role);
-      localStorage.setItem('admin_name', name);
-      localStorage.setItem('admin_state', state || '');
-      localStorage.setItem('admin_district', district || '');
+      authStorage.setSession({
+        token: access_token,
+        role,
+        name,
+        state,
+        district,
+      });
 
       navigate('/admin-dashboard');
     } catch (err) {

@@ -4,6 +4,8 @@
  */
 import axios from 'axios';
 
+import { authStorage } from './utils/authStorage';
+
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const api = axios.create({
@@ -14,7 +16,7 @@ const api = axios.create({
 
 // Automatically attach Authorization Bearer header if an active admin token exists
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('admin_token');
+  const token = authStorage.getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

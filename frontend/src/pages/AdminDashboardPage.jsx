@@ -8,6 +8,8 @@ import {
 import { MapContainer, TileLayer, CircleMarker, Popup, Polyline } from 'react-leaflet';
 import axios from 'axios';
 import AdminExitHeader from '../components/AdminExitHeader';
+import { authStorage } from '../utils/authStorage';
+import { useIdleTimer } from '../hooks/useIdleTimer';
 
 // Map Tiles (OpenStreetMap - Free & No API key needed)
 const DARK_MAP_TILES = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -84,18 +86,23 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const clearSessionAndRedirect = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_role');
-    localStorage.removeItem('admin_name');
-    localStorage.removeItem('admin_state');
-    localStorage.removeItem('admin_district');
-    navigate('/admin-login');
+  const clearSessionAndRedirect = (reason = '') => {
+    authStorage.clearSession();
+    navigate('/admin-login', reason ? { state: { reason } } : undefined);
   };
+
+  // Inactivity timeout: automatically log out after 15 minutes of idle time
+  useIdleTimer({
+    onIdle: () => {
+      clearSessionAndRedirect('You have been logged out due to 15 minutes of inactivity.');
+    },
+    timeoutMs: 15 * 60 * 1000,
+    enabled: true,
+  });
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = authStorage.getToken();
       if (token) {
         await axios.post(`${API_BASE}/api/admin/logout`, {}, {
           headers: { Authorization: `Bearer ${token}` }
@@ -109,11 +116,11 @@ export default function AdminDashboardPage() {
 
   // Auth check, session monitoring, and initial load
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
-    const role = localStorage.getItem('admin_role');
-    const name = localStorage.getItem('admin_name');
-    const state = localStorage.getItem('admin_state');
-    const district = localStorage.getItem('admin_district');
+    const token = authStorage.getToken();
+    const role = authStorage.getRole();
+    const name = authStorage.getName();
+    const state = authStorage.getState();
+    const district = authStorage.getDistrict();
 
     if (!token || !role || !isTokenValid(token)) {
       clearSessionAndRedirect();
@@ -135,10 +142,10 @@ export default function AdminDashboardPage() {
 
     // Periodic session expiration monitor (checks every 30 seconds)
     const sessionTimer = setInterval(() => {
-      const activeToken = localStorage.getItem('admin_token');
+      const activeToken = authStorage.getToken();
       if (!isTokenValid(activeToken)) {
         clearInterval(sessionTimer);
-        clearSessionAndRedirect();
+        clearSessionAndRedirect('Your session has expired. Please log in again.');
       }
     }, 30000);
 
@@ -147,7 +154,7 @@ export default function AdminDashboardPage() {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          clearSessionAndRedirect();
+          clearSessionAndRedirect('Your session has expired. Please log in again.');
         }
         return Promise.reject(error);
       }
@@ -160,7 +167,7 @@ export default function AdminDashboardPage() {
   }, [navigate]);
 
   const getHeaders = (token = null) => {
-    const activeToken = token || localStorage.getItem('admin_token');
+    const activeToken = token || authStorage.getToken();
     return {
       headers: { Authorization: `Bearer ${activeToken}` }
     };
@@ -212,12 +219,7 @@ export default function AdminDashboardPage() {
       if (dashRes.status === 'rejected') {
         const err = dashRes.reason;
         if (err.response?.status === 401 || err.response?.status === 403) {
-          localStorage.removeItem('admin_token');
-          localStorage.removeItem('admin_role');
-          localStorage.removeItem('admin_name');
-          localStorage.removeItem('admin_state');
-          localStorage.removeItem('admin_district');
-          navigate('/admin-login');
+          clearSessionAndRedirect('Your session has expired or is unauthorized. Please log in again.');
           return;
         }
         throw err;
@@ -225,12 +227,7 @@ export default function AdminDashboardPage() {
     } catch (err) {
       console.error(err);
       if (err.response?.status === 401 || err.response?.status === 403) {
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('admin_role');
-        localStorage.removeItem('admin_name');
-        localStorage.removeItem('admin_state');
-        localStorage.removeItem('admin_district');
-        navigate('/admin-login');
+        clearSessionAndRedirect('Your session has expired or is unauthorized. Please log in again.');
         return;
       }
       const fallbackDetail = API_BASE ? `Please verify backend availability at ${API_BASE}` : 'Please verify uvicorn backend connection on port 8000.';
