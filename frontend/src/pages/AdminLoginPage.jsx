@@ -35,6 +35,7 @@ export default function AdminLoginPage() {
   const [resendStatus, setResendStatus] = useState('');
 
   const API_BASE = import.meta.env.VITE_API_URL || '';
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE !== 'false' && (import.meta.env.DEV || import.meta.env.VITE_DEMO_MODE === 'true');
 
   // Validate active session on mount
   useEffect(() => {
@@ -219,31 +220,47 @@ export default function AdminLoginPage() {
               Welcome to the secure administrative control dashboard. Inspect citizen reports, approve road works, track contractor SLA breaches, manage sanction limits, and leverage predictive diagnostics.
             </p>
 
-            {/* Officer Accounts Directory */}
-            <div className="glass p-6 border-secondary/15">
-              <h3 className="font-heading font-semibold text-sm text-accent mb-3 flex items-center gap-2">
-                <span>🛡️</span> Officer Roles & Scopes
-              </h3>
-              <p className="text-xs text-text-secondary mb-4">
-                Click any role to pre-fill the username for that administrative jurisdiction:
-              </p>
-              <div className="grid grid-cols-1 gap-2 max-h-[220px] overflow-y-auto pr-1">
-                {OFFICER_ROLES.map((officer) => (
-                  <button
-                    key={officer.role}
-                    type="button"
-                    onClick={() => handleQuickFill(officer)}
-                    className="w-full text-left text-xs p-2.5 rounded-lg bg-surface-light/40 border border-white/5 hover:border-secondary/40 hover:bg-surface-light/80 transition-all flex items-center justify-between group"
-                  >
-                    <div>
-                      <div className="font-medium text-text-primary group-hover:text-secondary transition-colors">{officer.role}</div>
-                      <div className="text-[10px] text-text-secondary">{officer.desc}</div>
-                    </div>
-                    <span className="text-[10px] bg-secondary/10 text-secondary px-2 py-0.5 rounded border border-secondary/10 group-hover:bg-secondary group-hover:text-white transition-all">Select</span>
-                  </button>
-                ))}
+            {/* Officer Accounts Directory (Evaluation & Sandbox Mode) */}
+            {isDemoMode ? (
+              <div className="glass p-6 border-secondary/15">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-heading font-semibold text-sm text-accent flex items-center gap-2">
+                    <span>🛡️</span> Officer Roles & Scopes
+                  </h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20 font-medium">
+                    Demo Sandbox
+                  </span>
+                </div>
+                <p className="text-xs text-text-secondary mb-4">
+                  Evaluation mode: Click any role to pre-fill the username for that administrative jurisdiction:
+                </p>
+                <div className="grid grid-cols-1 gap-2 max-h-[220px] overflow-y-auto pr-1">
+                  {OFFICER_ROLES.map((officer) => (
+                    <button
+                      key={officer.role}
+                      type="button"
+                      onClick={() => handleQuickFill(officer)}
+                      className="w-full text-left text-xs p-2.5 rounded-lg bg-surface-light/40 border border-white/5 hover:border-secondary/40 hover:bg-surface-light/80 transition-all flex items-center justify-between group"
+                    >
+                      <div>
+                        <div className="font-medium text-text-primary group-hover:text-secondary transition-colors">{officer.role}</div>
+                        <div className="text-[10px] text-text-secondary">{officer.desc}</div>
+                      </div>
+                      <span className="text-[10px] bg-secondary/10 text-secondary px-2 py-0.5 rounded border border-secondary/10 group-hover:bg-secondary group-hover:text-white transition-all">Select</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="glass p-6 border-white/10 text-left">
+                <h3 className="font-heading font-semibold text-sm text-text-primary mb-2 flex items-center gap-2">
+                  <span>🔒</span> Restricted Authority Access
+                </h3>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  This portal is reserved for authorized PWD, NHAI, District Collectorate, and Municipal road authorities. Unauthorized access attempts are monitored and logged.
+                </p>
+              </div>
+            )}
           </motion.div>
 
           {/* Right column: Login Form Card */}

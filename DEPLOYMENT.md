@@ -14,8 +14,19 @@ This guide details how to securely deploy both the **FastAPI Backend** and the *
 | `JWT_SECRET` | Strong random key used for administrative JWT authentication tokens | `openssl rand -hex 32` |
 | `ALLOWED_ORIGINS` | Comma-separated list of allowed frontend domain URLs | `https://your-app.vercel.app,http://localhost:5173` |
 | `GOOGLE_API_KEY` | Google Gemini API key for AI Chatbot | Free key from [Google AI Studio](https://aistudio.google.com/apikey) |
-| `ADMIN_PASSWORD` | Master password for the Super Admin account | Secure password of your choice |
-| `ENV` | Environment identifier | `production` |
+| `ENVIRONMENT` | Environment identifier (`production` or `development`) | `production` |
+| `ADMIN_INIT_USERNAME` | (Optional) Initial Super Admin username for automated boot | `ops_admin` |
+| `ADMIN_INIT_PASSWORD` | (Optional) Strong initial password for automated Super Admin | Complex password (8+ chars) |
+
+> [!NOTE]
+> **Production Administrator Provisioning**:
+> When `ENVIRONMENT=production`, default mock accounts (`pune_collector`, `nhai_officer`, etc.) with weak passwords are **never** seeded.
+> You can provision your first Super Admin in one of two ways:
+> 1. **Interactive CLI (Recommended)**: In your deployment terminal, run:
+>    ```bash
+>    python cli_admin.py create-superuser
+>    ```
+> 2. **Environment Variables**: Define `ADMIN_INIT_USERNAME` and `ADMIN_INIT_PASSWORD` in your cloud provider's secret manager before first startup.
 
 > [!TIP]
 > **Supabase Connection Pooling**: In production, always use Supabase's **Transaction Pooler** (port 6543) or **Session Pooler** (port 5432) connection string to prevent exhausting serverless connection limits.

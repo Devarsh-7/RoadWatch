@@ -874,73 +874,94 @@ def seed_admin_data(db):
     # 2. Seed Admin Users if they don't exist
     if db.query(AdminUser).count() == 0:
         env = os.getenv("ENVIRONMENT", "development").lower()
-        default_pw = os.getenv("ADMIN_INITIAL_PASSWORD") or os.getenv("ADMIN_PASSWORD")
-        if env == "production" and not default_pw:
-            import secrets
-            default_pw = secrets.token_urlsafe(16)
-            print("[INFO] Production seed: generated secure initial credentials.")
-        elif not default_pw:
-            default_pw = "admin123"
-
-        admin_users = [
-            AdminUser(
-                username="admin",
-                password_hash=hash_password(os.getenv("ADMIN_PASSWORD", default_pw)),
-                email="admin@roadwatch.gov.in",
-                name="Super Admin",
-                role="Super Admin",
-                is_verified=1
-            ),
-            AdminUser(
-                username="maharashtra_auth",
-                password_hash=hash_password(os.getenv("MAHARASHTRA_AUTH_PASSWORD", default_pw if env == "production" else "maharashtra123")),
-                email="state.maharashtra@roadwatch.gov.in",
-                name="Shri Devendra Patil (State Secretary)",
-                role="State Authority",
-                state="Maharashtra",
-                is_verified=1
-            ),
-            AdminUser(
-                username="pune_collector",
-                password_hash=hash_password(os.getenv("PUNE_COLLECTOR_PASSWORD", default_pw if env == "production" else "pune123")),
-                email="collector.pune@roadwatch.gov.in",
-                name="Dr. Rajesh Deshmukh (IAS)",
-                role="District Collector",
-                state="Maharashtra",
-                district="Pune",
-                is_verified=1
-            ),
-            AdminUser(
-                username="pwd_engineer",
-                password_hash=hash_password(os.getenv("PWD_ENGINEER_PASSWORD", default_pw if env == "production" else "pwd123")),
-                email="engineer.pwd@roadwatch.gov.in",
-                name="Er. S. Ramanathan (PWD Executive Engineer)",
-                role="PWD Engineer",
-                state="Tamil Nadu",
-                district="Salem",
-                is_verified=1
-            ),
-            AdminUser(
-                username="nhai_officer",
-                password_hash=hash_password(os.getenv("NHAI_OFFICER_PASSWORD", default_pw if env == "production" else "nhai123")),
-                email="officer.nhai@roadwatch.gov.in",
-                name="Er. K. Meenakshi (NHAI Project Director)",
-                role="NHAI Officer",
-                state="Tamil Nadu",
-                district="Salem",
-                is_verified=1
-            ),
-            AdminUser(
-                username="inspector",
-                password_hash=hash_password(os.getenv("INSPECTOR_PASSWORD", default_pw if env == "production" else "inspector123")),
-                email="inspector@roadwatch.gov.in",
-                name="Sanjay Sharma (Complaint Inspector)",
-                role="Complaint Inspector",
-                is_verified=1
-            )
-        ]
-        db.add_all(admin_users)
-        db.commit()
+        if env == "production":
+            init_username = os.getenv("ADMIN_INIT_USERNAME")
+            init_password = os.getenv("ADMIN_INIT_PASSWORD")
+            init_email = os.getenv("ADMIN_INIT_EMAIL", "admin@roadwatch.gov.in")
+            if init_username and init_password:
+                from security import validate_password_strength
+                is_valid, msg = validate_password_strength(init_password)
+                if not is_valid:
+                    print(f"[WARN] ADMIN_INIT_PASSWORD does not meet strength requirements: {msg}. Super Admin not created.")
+                else:
+                    admin_user = AdminUser(
+                        username=init_username.strip(),
+                        password_hash=hash_password(init_password),
+                        email=init_email.strip().lower(),
+                        name="Super Admin",
+                        role="Super Admin",
+                        is_verified=1
+                    )
+                    db.add(admin_user)
+                    db.commit()
+                    print(f"[OK] Production initial Super Admin '{init_username}' created securely.")
+            else:
+                print("[INFO] Production mode: Skipping demo admin user creation.")
+                print("[INFO] To create a Super Admin, run: python cli_admin.py create-superuser")
+                print("[INFO] Or configure ADMIN_INIT_USERNAME and ADMIN_INIT_PASSWORD in environment.")
+        else:
+            # Development / Demo mode: seed default accounts for testing & evaluation
+            default_pw = os.getenv("ADMIN_PASSWORD", "admin123")
+            admin_users = [
+                AdminUser(
+                    username="admin",
+                    password_hash=hash_password(default_pw),
+                    email="admin@roadwatch.gov.in",
+                    name="Super Admin",
+                    role="Super Admin",
+                    is_verified=1
+                ),
+                AdminUser(
+                    username="maharashtra_auth",
+                    password_hash=hash_password(os.getenv("MAHARASHTRA_AUTH_PASSWORD", "maharashtra123")),
+                    email="state.maharashtra@roadwatch.gov.in",
+                    name="Shri Devendra Patil (State Secretary)",
+                    role="State Authority",
+                    state="Maharashtra",
+                    is_verified=1
+                ),
+                AdminUser(
+                    username="pune_collector",
+                    password_hash=hash_password(os.getenv("PUNE_COLLECTOR_PASSWORD", "pune123")),
+                    email="collector.pune@roadwatch.gov.in",
+                    name="Dr. Rajesh Deshmukh (IAS)",
+                    role="District Collector",
+                    state="Maharashtra",
+                    district="Pune",
+                    is_verified=1
+                ),
+                AdminUser(
+                    username="pwd_engineer",
+                    password_hash=hash_password(os.getenv("PWD_ENGINEER_PASSWORD", "pwd123")),
+                    email="engineer.pwd@roadwatch.gov.in",
+                    name="Er. S. Ramanathan (PWD Executive Engineer)",
+                    role="PWD Engineer",
+                    state="Tamil Nadu",
+                    district="Salem",
+                    is_verified=1
+                ),
+                AdminUser(
+                    username="nhai_officer",
+                    password_hash=hash_password(os.getenv("NHAI_OFFICER_PASSWORD", "nhai123")),
+                    email="officer.nhai@roadwatch.gov.in",
+                    name="Er. K. Meenakshi (NHAI Project Director)",
+                    role="NHAI Officer",
+                    state="Tamil Nadu",
+                    district="Salem",
+                    is_verified=1
+                ),
+                AdminUser(
+                    username="inspector",
+                    password_hash=hash_password(os.getenv("INSPECTOR_PASSWORD", "inspector123")),
+                    email="inspector@roadwatch.gov.in",
+                    name="Sanjay Sharma (Complaint Inspector)",
+                    role="Complaint Inspector",
+                    is_verified=1
+                )
+            ]
+            db.add_all(admin_users)
+            db.commit()
+            print("[OK] Development seed: 6 demo officer accounts seeded.")
 
     # 3. Seed Contractor Performance if it doesn't exist
     if db.query(ContractorPerformance).count() == 0:
