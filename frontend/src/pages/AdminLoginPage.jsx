@@ -49,6 +49,13 @@ export default function AdminLoginPage() {
     // Always purge any stale legacy localStorage admin tokens
     authStorage.purgeLegacyLocalStorage();
 
+    // Pre-fill remembered username if available, ensuring password remains blank
+    const savedUsername = localStorage.getItem('admin_last_username');
+    if (savedUsername) {
+      setUsername(savedUsername);
+    }
+    setPassword('');
+
     const token = authStorage.getToken();
     const role = authStorage.getRole();
 
@@ -99,6 +106,9 @@ export default function AdminLoginPage() {
         state,
         district,
       });
+
+      // Remember username for convenient re-entry, without storing the password
+      localStorage.setItem('admin_last_username', username);
 
       navigate('/admin-dashboard');
     } catch (err) {
@@ -325,7 +335,7 @@ export default function AdminLoginPage() {
                 </motion.div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6 text-left">
+              <form onSubmit={handleSubmit} className="space-y-6 text-left" autoComplete="off">
                 <div>
                   <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Username</label>
                   <input
@@ -348,12 +358,12 @@ export default function AdminLoginPage() {
                     placeholder="••••••••"
                     className="input-field"
                     disabled={loading}
-                    autoComplete="current-password"
+                    autoComplete="new-password"
                   />
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-text-secondary pt-2">
-                  <span className="text-[11px] text-text-muted">60-minute encrypted sessions</span>
+                  <span className="text-[11px] text-text-muted">30-minute encrypted sessions</span>
                   <button
                     type="button"
                     onClick={() => {
