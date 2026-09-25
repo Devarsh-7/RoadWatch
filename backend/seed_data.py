@@ -871,34 +871,45 @@ def seed_admin_data(db):
         db.add_all(roles_permissions)
         db.commit()
 
-    # 2. Seed Admin Users if they don't exist
+    # 2. Check for environment-specified Super Admin (ADMIN_INIT_USERNAME / ADMIN_INIT_PASSWORD)
+    init_username = os.getenv("ADMIN_INIT_USERNAME")
+    init_password = os.getenv("ADMIN_INIT_PASSWORD")
+    if init_username and init_password:
+        init_username = init_username.strip()
+        existing = db.query(AdminUser).filter(AdminUser.username == init_username).first()
+        from security import validate_password_strength
+        is_valid, msg = validate_password_strength(init_password)
+        if not is_valid:
+            print(f"[WARN] ADMIN_INIT_PASSWORD does not meet strength requirements: {msg}. User '{init_username}' not updated/created.")
+        else:
+            if not existing:
+                init_email = os.getenv("ADMIN_INIT_EMAIL", f"{init_username}@roadwatch.gov.in").strip().lower()
+                admin_user = AdminUser(
+                    username=init_username,
+                    password_hash=hash_password(init_password),
+                    email=init_email,
+                    name=os.getenv("ADMIN_INIT_NAME", "Super Admin"),
+                    role="Super Admin",
+                    is_verified=1,
+                    is_active=1
+                )
+                db.add(admin_user)
+                db.commit()
+                print(f"[OK] Initial Super Admin '{init_username}' provisioned from environment variables.")
+            else:
+                existing.password_hash = hash_password(init_password)
+                existing.is_active = 1
+                existing.is_verified = 1
+                db.commit()
+                print(f"[OK] Existing Super Admin '{init_username}' credentials synchronized from environment variables.")
+
+    # 3. Seed demo accounts if database has no admin users
     if db.query(AdminUser).count() == 0:
         env = os.getenv("ENVIRONMENT", "development").lower()
         if env == "production":
-            init_username = os.getenv("ADMIN_INIT_USERNAME")
-            init_password = os.getenv("ADMIN_INIT_PASSWORD")
-            init_email = os.getenv("ADMIN_INIT_EMAIL", "admin@roadwatch.gov.in")
-            if init_username and init_password:
-                from security import validate_password_strength
-                is_valid, msg = validate_password_strength(init_password)
-                if not is_valid:
-                    print(f"[WARN] ADMIN_INIT_PASSWORD does not meet strength requirements: {msg}. Super Admin not created.")
-                else:
-                    admin_user = AdminUser(
-                        username=init_username.strip(),
-                        password_hash=hash_password(init_password),
-                        email=init_email.strip().lower(),
-                        name="Super Admin",
-                        role="Super Admin",
-                        is_verified=1
-                    )
-                    db.add(admin_user)
-                    db.commit()
-                    print(f"[OK] Production initial Super Admin '{init_username}' created securely.")
-            else:
-                print("[INFO] Production mode: Skipping demo admin user creation.")
-                print("[INFO] To create a Super Admin, run: python cli_admin.py create-superuser")
-                print("[INFO] Or configure ADMIN_INIT_USERNAME and ADMIN_INIT_PASSWORD in environment.")
+            print("[INFO] Production mode: Skipping demo admin user creation.")
+            print("[INFO] To create a Super Admin, run: python cli_admin.py create-superuser")
+            print("[INFO] Or configure ADMIN_INIT_USERNAME and ADMIN_INIT_PASSWORD in environment.")
         else:
             # Development / Demo mode: seed default accounts for testing & evaluation
             default_pw = os.getenv("ADMIN_PASSWORD", "admin123")
