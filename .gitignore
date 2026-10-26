@@ -24,6 +24,7 @@ frontend/.env.*
 # Build output
 frontend/dist/
 frontend/build/
+graphify-out/
 
 # Database
 *.db
@@ -47,3 +48,6 @@ npm-debug.log*
 # PWA generated
 sw.js
 workbox-*.js
+
+# Local documentation & guides
+SUPABASE_GUIDE.md
