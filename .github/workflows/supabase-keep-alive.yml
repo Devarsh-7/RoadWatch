@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Send keep-alive query to Supabase REST API
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://oplwnwgkkmdrbiytzmwb.supabase.co' }}
+          SUPABASE_URL: https://oplwnwgkkmdrbiytzmwb.supabase.co
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           if [ -z "$SUPABASE_ANON_KEY" ]; then
